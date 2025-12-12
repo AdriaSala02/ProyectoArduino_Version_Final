@@ -1,0 +1,38 @@
+#include <SoftwareSerial.h>
+
+int pinX = A0;
+int pinSW = 2;
+
+bool modoDirecto = false;
+bool ultimoSW = HIGH;
+
+#define LORA_RX 10
+#define LORA_TX 11
+
+SoftwareSerial LoRaSerial(LORA_RX, LORA_TX);
+
+void setup() {
+  pinMode(pinSW, INPUT_PULLUP);
+  Serial.begin(9600);
+  LoRaSerial.begin(9600);
+  Serial.println("Transmisor listo");
+}
+
+void loop() {
+  int xVal = analogRead(pinX);
+  bool swVal = digitalRead(pinSW);
+
+  if (swVal == LOW && ultimoSW == HIGH) {
+    modoDirecto = !modoDirecto;
+    delay(150);
+  }
+  ultimoSW = swVal;
+
+  // Convertir a string con delimitador
+  String paquete = String(modoDirecto ? 1 : 0) + "," + String(xVal) + "\n";
+  LoRaSerial.print(paquete);
+
+  Serial.print("Enviado -> "); Serial.println(paquete);
+
+  delay(50);
+}

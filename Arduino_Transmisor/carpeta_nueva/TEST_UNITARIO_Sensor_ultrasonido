@@ -1,0 +1,31 @@
+#include <unity.h>
+
+void test_distancia_valida() {
+  mockPulseValue = 1000;  // µs
+  float d = medirDistanciaMedia(1);
+
+  TEST_ASSERT_TRUE(d > MIN_CM);
+  TEST_ASSERT_TRUE(d < MAX_CM);
+}
+
+void test_distancia_timeout() {
+  mockPulseValue = 0;
+  float d = medirDistanciaMedia(3);
+
+  TEST_ASSERT_EQUAL_FLOAT(-1.0, d);
+}
+
+void test_distancia_fuera_rango() {
+  mockPulseValue = 50000; // muy grande
+  float d = medirDistanciaMedia(1);
+
+  TEST_ASSERT_EQUAL_FLOAT(-1.0, d);
+}
+
+void setup() {
+  UNITY_BEGIN();
+  RUN_TEST(test_distancia_valida);
+  RUN_TEST(test_distancia_timeout);
+  RUN_TEST(test_distancia_fuera_rango);
+  UNITY_END();
+}

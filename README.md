@@ -38,5 +38,4 @@ pandas o numpy para manejo de datos
 
 Contribución
 
-Este proyecto fue desarrollado por [Tu Nombre], [Nombre Compañero 1] y [Nombre Compañero 2].
-Si deseas contribuir, puedes abrir un pull request o reportar issues.
+Este proyecto fue desarrollado por Miguel, Lucas y Adrià Sala.

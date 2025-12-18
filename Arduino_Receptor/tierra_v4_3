@@ -1,4 +1,5 @@
 // ESTACIÓN TIERRA
+// logica buena pero sin órbita  ( + órbita añadida sin tocar la lógica )
 // Python <===> Estación de Tierra
 
 #include <SoftwareSerial.h>
@@ -23,7 +24,7 @@ SoftwareSerial mySerial(10, 11);  // RX, TX con Satélite
 // =========================
 // Validación de comandos desde Python
 // Formato esperado: "g:c" o "g:c:v"
-// g = grupo (0..3)
+// g = grupo (0..4)
 // c = código según el protocolo
 // v = parámetro (int16), opcional según comando
 // =========================
@@ -95,7 +96,7 @@ bool parseComandoPython(const String &com, int &grupo, int &codigo, long &valor1
   valor1 = sValor.toInt();
 
   // Rango básico de grupo
-  if (grupo < 0 || grupo > 3) {
+  if (grupo < 0 || grupo > 4) {
     return false;
   }
 
@@ -115,6 +116,9 @@ bool parseComandoPython(const String &com, int &grupo, int &codigo, long &valor1
       if (codigo < 1 || codigo > 5) return false;
       break;
     case 3:
+      if (codigo < 1 || codigo > 3) return false;
+      break;
+    case 4:
       if (codigo < 1 || codigo > 3) return false;
       break;
     default:
@@ -187,7 +191,7 @@ void setup() {
   Serial.setTimeout(50);
   mySerial.setTimeout(50);
 
-  Serial.println(F("Estación de tierra lista. Esperando comandos desde Python."));
+  Serial.println(F("1:900|"));
 }
 
 
@@ -217,8 +221,9 @@ void loop() {
         rxLen = b;
         if (rxLen > sizeof(rxBuf)) {
           // overflow: error de trama
-          //digitalWrite(LED_CHKERR, HIGH);
+          digitalWrite(LED_CHKERR, HIGH);
           digitalWrite(LED_ERROR, HIGH);
+          Serial.print(F("1:910|")); // notifica a la GUI que hay overflow
           rxState = 0;
         } else {
           rxIndex = 0;
@@ -277,24 +282,43 @@ void loop() {
             float valor = u.f;
 
             // reenviamos como "id:valor|"
-            Serial.print(id);
-            Serial.print(':');
             // De momento sin forzar decimales (Python lo parsea igual).
-            Serial.print(valor);
-            Serial.print('|');
+            //
+            // (ÓRBITA) ids 10,11,12 -> se envían juntos como "POS|x|y|z|"
+            if (id >= 10 && id <= 12) {
+              static float x = 0.0f, y = 0.0f, z = 0.0f;
+
+              if (id == 10) {
+                x = valor;
+              } else if (id == 11) {
+                y = valor;
+              } else if (id == 12) {
+                z = valor;
+
+                Serial.print(F("POS|"));
+                Serial.print(x); Serial.print('|');
+                Serial.print(y); Serial.print('|');
+                Serial.print(z); Serial.print('|');
+              }
+            } else {
+              Serial.print(id);
+              Serial.print(':');
+              Serial.print(valor);
+              Serial.print('|');
+            }
 
             if (id < 0) {
               errorFrame = true;
             }
           }
           else if (rxLen == 2) {
-            // id + byte (p.ej. id=6 y ángulo 0–180)
-            int8_t id2 = (int8_t)rxBuf[0];
-            int8_t v   = (int8_t)rxBuf[1];
+            // id + byte (id=6 y ángulo 0–180)
+            int8_t  id2 = (int8_t)rxBuf[0];
+            uint8_t v   = (uint8_t)rxBuf[1];
 
             Serial.print(id2);
             Serial.print(':');
-            Serial.print(v);
+            Serial.print((int)v);
             Serial.print('|');
 
             if (id2 < 0) {
@@ -360,6 +384,7 @@ void loop() {
   if (!parseComandoPython(com, grupo, codigo, valor1)) {
       // Comando incorrecto
       digitalWrite(LED_ERROR, HIGH);
+      Serial.print(F("1:901|"));
       return;    // OJO: no se envía nada al satélite
   }
 
